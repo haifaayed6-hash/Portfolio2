@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini ERP Patisserie</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    input { margin: 5px; }
+    .alert { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>Mini ERP Patisserie</h1>
+
+<h2>Ajouter / Modifier Order</h2>
+<input id="productName" placeholder="Nom du produit">
+<input id="quantity" type="number" placeholder="Quantité">
+<button onclick="addOrder()">Ajouter / Modifier</button>
+
+<h2>Modifier Stock</h2>
+<input id="ingredientName" placeholder="Nom de l'ingrédient">
+<input id="stockQty" type="number" placeholder="Quantité stock">
+<button onclick="updateStock()">Update Stock</button>
+
+<h2>Orders</h2>
+<table id="ordersTable">
+  <thead>
+    <tr><th>Produit</th><th>Quantité</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<h2>Stock & Consommation</h2>
+<table id="stockTable">
+  <thead>
+    <tr><th>Ingredient</th><th>Stock Initial</th><th>Consommation</th><th>Stock Restant</th><th>Alert</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+// ======= Données Initiales =======
+let orders = [
+  { product: "Banana Cake", quantity: 105 },
+  { product: "Date Cake", quantity: 10 },
+  { product: "English Cake", quantity: 20 },
+  { product: "Brownies", quantity: 100 },
+];
+
+let recipes = {
+  "Banana Cake": [
+    { ingredient: "Farine", qtyPerUnit: 0.225 },
+    { ingredient: "Sugar", qtyPerUnit: 0.14 },
+    { ingredient: "Eggs", qtyPerUnit: 0.1 }
+  ],
+  "Date Cake": [
+    { ingredient: "Farine", qtyPerUnit: 0.141 },
+    { ingredient: "Sugar", qtyPerUnit: 0.116 },
+    { ingredient: "Eggs", qtyPerUnit: 0.082 }
+  ],
+  "English Cake": [
+    { ingredient: "Farine", qtyPerUnit: 0.304 },
+    { ingredient: "Sugar", qtyPerUnit: 0.293 },
+    { ingredient: "Eggs", qtyPerUnit: 0.182 }
+  ],
+  "Brownies": [
+    { ingredient: "Farine", qtyPerUnit: 0.32 },
+    { ingredient: "Sugar", qtyPerUnit: 1 },
+    { ingredient: "Eggs", qtyPerUnit: 0.5 }
+  ]
+};
+
+let stock = [
+  { ingredient: "Farine", stock_quantity: 450000 },
+  { ingredient: "Sugar", stock_quantity: 869 },
+  { ingredient: "Eggs", stock_quantity: 14567 }
+];
+
+// ======= Fonctions =======
+function calculateConsumption() {
+  // reset stockRestant
+  stock.forEach(s => s.consumption = 0);
+
+  orders.forEach(order => {
+    let recipe = recipes[order.product];
+    if(recipe) {
+      recipe.forEach(r => {
+        let s = stock.find(st => st.ingredient === r.ingredient);
+        if(s) {
+          s.consumption += r.qtyPerUnit * order.quantity;
+        } else {
+          stock.push({ ingredient: r.ingredient, stock_quantity: 0, consumption: r.qtyPerUnit * order.quantity });
+        }
+      });
+    }
+  });
+
+  // calcul stock restant et alert
+  stock.forEach(s => {
+    s.remaining = s.stock_quantity - (s.consumption || 0);
+    s.alert = s.remaining < 0 ? "❌ Rupture!" : "";
+  });
+
+  renderStockTable();
+  renderOrdersTable();
+}
+
+// ======= Rendu Tables =======
+function renderOrdersTable() {
+  let tbody = document.querySelector("#ordersTable tbody");
+  tbody.innerHTML = "";
+  orders.forEach(o => {
+    let tr = document.createElement("tr");
+    tr.innerHTML = `<td>${o.product}</td><td>${o.quantity}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderStockTable() {
+  let tbody = document.querySelector("#stockTable tbody");
+  tbody.innerHTML = "";
+  stock.forEach(s => {
+    let tr = document.createElement("tr");
+    tr.innerHTML = `<td>${s.ingredient}</td><td>${s.stock_quantity}</td><td>${s.consumption.toFixed(2)}</td><td>${s.remaining.toFixed(2)}</td><td class="alert">${s.alert}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ======= Ajouter / Modifier Order =======
+function addOrder() {
+  let productName = document.getElementById("productName").value;
+  let quantity = Number(document.getElementById("quantity").value);
+  if(!productName || !quantity) return alert("Remplir tous les champs!");
+  let order = orders.find(o => o.product === productName);
+  if(order) order.quantity = quantity;
+  else orders.push({ product: productName, quantity });
+  calculateConsumption();
+}
+
+// ======= Modifier Stock =======
+function updateStock() {
+  let ingredientName = document.getElementById("ingredientName").value;
+  let newStock = Number(document.getElementById("stockQty").value);
+  if(!ingredientName || isNaN(newStock)) return alert("Remplir tous les champs!");
+  let s = stock.find(st => st.ingredient === ingredientName);
+  if(s) s.stock_quantity = newStock;
+  else stock.push({ ingredient: ingredientName, stock_quantity: newStock, consumption: 0 });
+  calculateConsumption();
+}
+
+// ======= Initial =======
+calculateConsumption();
+
+</script>
+</body>
+</html>
